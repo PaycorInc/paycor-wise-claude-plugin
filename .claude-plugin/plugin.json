@@ -1,0 +1,26 @@
+{
+  "name": "paycor-wise",
+  "displayName": "Paycor WISE Assistant",
+  "version": "0.3.0",
+  "description": "Bring the intelligence of Paycor WISE Assistant into Claude. Paycor's AI-powered assistant helps users complete common Paycor workflow tasks, find workforce insights, and answer HR and payroll questions.",
+  "author": {
+    "name": "Paycor",
+    "url": "https://www.paycor.com"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "homepage": "https://www.paycor.com",
+  "privacyPolicyUrl": "https://www.paycor.com/privacy-policy/",
+  "termsOfUseUrl": "https://www.paycor.com/terms-of-use/",
+  "supportUrl": "https://www.paycor.com/services-support/",
+  "keywords": [
+    "paycor",
+    "wise",
+    "hr",
+    "payroll",
+    "benefits",
+    "employees",
+    "certificates",
+    "documents",
+    "upload"
+  ]
+}
