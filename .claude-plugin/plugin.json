@@ -9,6 +9,8 @@
   },
   "license": "SEE LICENSE IN LICENSE",
   "homepage": "https://www.paycor.com",
+  "repository": "https://github.com/PaycorInc/paycor-wise-claude-plugin",
+  "documentationUrl": "https://github.com/PaycorInc/paycor-wise-claude-plugin#readme",
   "privacyPolicyUrl": "https://www.paycor.com/privacy-policy/",
   "termsOfUseUrl": "https://www.paycor.com/terms-of-use/",
   "supportUrl": "https://www.paycor.com/services-support/",
