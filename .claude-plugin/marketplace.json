@@ -1,0 +1,20 @@
+{
+  "name": "paycor-wise-marketplace",
+  "owner": {
+    "name": "Paycor",
+    "url": "https://www.paycor.com"
+  },
+  "metadata": {
+    "description": "Paycor WISE Assistant plugins for Claude."
+  },
+  "plugins": [
+    {
+      "name": "paycor-wise",
+      "source": "./",
+      "description": "Bring the intelligence of Paycor WISE Assistant into Claude. Answer HR, payroll, benefits, and time questions and upload documents to Paycor.",
+      "version": "0.3.0",
+      "homepage": "https://www.paycor.com",
+      "keywords": ["paycor", "wise", "hr", "payroll", "benefits", "employees", "certificates", "documents", "upload"]
+    }
+  ]
+}
