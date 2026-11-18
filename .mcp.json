@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "wise": {
+      "type": "http",
+      "url": "https://apis.paycor.com/mcp/wise-assistant/mcp",
+      "timeout": 330000,
+      "oauth": {
+        "scopes": "openid profile email offline_access"
+      }
+    }
+  }
+}
