@@ -181,10 +181,27 @@ user can answer it there**.
    `get_wise_decision_result` with `requestId` set to the paused result's
    `structuredContent.requestId`, then treat its result exactly like an `ask_wise` result (the
    same rules above apply). If it is `decision_required` again, follow these steps for the new card.
-4. If the user replies in chat instead of using the card (for example they change their mind or ask
-   something else), call `ask_wise` with their reply as the current request and
-   `pendingRequestId` set to the paused result's `structuredContent.requestId`. That
-   declines the pending request — it is never approved this way — and WISE answers the reply.
+4. Never assume the card is still open. The user may answer it without anything reaching you: some
+   hosts show the outcome and WISE's reply only on the card. So on the user's next message after a
+   `decision_required` result, unless that message already reports the decision (step 3), first find
+   out whether the card was answered:
+   - If the host offers a way to read the card's current state (for example a widget-context tool
+     for `ask_wise`), read it.
+   - Otherwise call `get_wise_decision_result` with the paused result's `structuredContent.requestId`.
+     WISE's reply means the card was answered; an error saying WISE is still waiting for the user's
+     decision means it is still open.
+
+   Then:
+   - **Card already answered** → do not pass `pendingRequestId` (nothing is pending any more, and the
+     change is already made or declined). Mention the outcome in one line if it matters to the new
+     message, and handle the new message as an ordinary `ask_wise` request.
+   - **Card still open** → the user is replying in chat instead of using the card (for example they
+     change their mind or ask something else). Call `ask_wise` with their reply as the current
+     request and `pendingRequestId` set to the paused result's `structuredContent.requestId`. That
+     declines the pending request — it is never approved this way — and WISE answers the reply.
+     Tell the user in one line that the pending change was declined.
+5. Never tell the user a change is still waiting for approval, or that it was not made, unless you
+   checked as in step 4 in this turn.
 
 ### Without the card (the note says this app cannot show WISE's decision card)
 
@@ -212,3 +229,14 @@ The user decides in chat instead, and you relay their answer.
   Re-authenticating will not fix it; their Paycor administrator needs to grant it. Say so plainly.
 - A timeout → a WISE run is bounded server-side. Suggest a narrower or more specific question rather
   than retrying the same one unchanged.
+- "The WISE service returned an error and could not complete this request" → usually a temporary
+  failure between the connector and WISE.
+  - For a request that only reads data (lists, look-ups, balances, questions), retry the same call
+    once, immediately and without comment (same `request`, same `companyId`; keep `pendingRequestId`
+    only if step 4 of the decision flow still applies).
+  - For a request that creates, updates or deletes something, do not resend it blindly: the change
+    may already have been applied before the error. First ask WISE, in a read-only request, whether
+    the change is already in place (e.g. "Show the assets assigned to Brian Anderson (employee #282)"),
+    and resend the change only if it is not.
+  - If the retry fails too, stop and tell the user WISE is having trouble, with the `requestId` from
+    the last error so support can trace it. Never retry more than once.
