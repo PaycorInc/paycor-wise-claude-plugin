@@ -19,7 +19,8 @@ Once connected, ask naturally and Claude will route the question to WISE:
 - "How many employees are in the Sales department?"
 - "How do I add a new hire in Paycor?"
 
-Follow-up questions work — "and for the month before?" stays in the same conversation.
+Follow-up questions work — ask "and for the month before?" and Claude restates what it refers to
+in the request it sends. WISE receives only your current request, never your chat history.
 
 ## What you need before you start
 
@@ -36,20 +37,23 @@ The plugin appears in Claude as **Paycor WISE Assistant**.
 2. Open the **Discover** tab and find **Paycor WISE Assistant**.
 3. Click **Add**. The first time Claude uses WISE, you are asked to sign in (see below).
 
-In Claude Cowork, open the **Cowork** tab first, then open **Customize > Plugins**.
+In Claude Cowork, open the **Cowork** tab first, then open **Customize > Plugins**. On Team and
+Enterprise plans, your organization's Claude owner can also share the plugin with you directly.
 
-### From a plugin file
+### In Claude Code
 
-If you were given the plugin as a file (for example `Paycor WISE Assistant.zip`), open
-**Settings > Customize > Plugins** and upload it there. On Team and Enterprise plans, your
-organization's Claude owner can also share the plugin with you directly.
+Add this repository as a plugin marketplace, then install the plugin:
+
+```
+/plugin marketplace add PaycorInc/paycor-wise-claude-plugin
+/plugin install paycor-wise@paycor-wise-marketplace
+```
 
 ### As a connector only
 
 To connect WISE without the plugin's skills, open **Settings > Customize > Connectors**, click
-**+ Add**, then **Add custom connector**, and enter the URL from the `url` field of this
-package's `.mcp.json` file. Without the skills, Claude is less likely to route HR and payroll
-questions to WISE on its own.
+**+ Add**, then **Add custom connector**, and enter `https://apis.paycor.com/mcp/wise-assistant/mcp`.
+Without the skills, Claude is less likely to route HR and payroll questions to WISE on its own.
 
 See [Use plugins in Claude](https://support.claude.com/en/articles/13837440-use-plugins-in-claude)
 and [Get started with custom connectors using remote MCP](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp)
@@ -75,9 +79,15 @@ stays valid for a while afterwards and refreshes silently, so you should rarely 
 
 ## Tools this plugin adds
 
-| Tool | What it does |
-|---|---|
-| `ask_wise` | Sends your question to WISE and returns the answer. WISE may also make changes on your behalf (e.g. updating employee information) when you ask it to. If your account has access to more than one company, `ask_wise` asks which one you mean before answering. |
+| Tool | Visible to Claude | What it does |
+|---|---|---|
+| `ask_wise` | Yes | Sends your current request to WISE and returns the answer. WISE makes a change (e.g. updating employee information) only when you ask for it. Before any delete, or any other change that cannot be undone, WISE always pauses for your approval — on WISE's approval card or, in apps that cannot show the card, in Claude's own confirmation prompt — and never makes such a change without it. If your account has access to more than one company, `ask_wise` asks which one you mean before answering. |
+| `create_wise_upload_ticket`, `upload_wise_file`, `get_wise_file_status` | Yes | Upload a document you want filed in your Paycor records. |
+| `upload_wise_workbook`, `get_wise_workbook_status` | Yes (Claude for Excel) | Send the open workbook to WISE. |
+| `get_wise_decision_result` | Yes | Reads WISE's reply after you decided on the approval card. |
+| `submit_wise_decision` | Yes (only where the card can't be shown) | Submits the answer you gave in Claude's confirmation prompt. |
+| `resolve_wise_decision` | No (used by the approval card only) | Supports the decision card: submits your Approve/Deny or answer click. |
+| `get_wise_decision_status` | No (used by the approval card only) | Supports the decision card: shows whether a card was already decided when it is shown again. |
 
 `ask_wise` can read and write data depending on what you ask, so Claude will confirm before
 calling it. If you would rather not approve each use individually, your administrator can
@@ -89,8 +99,8 @@ pre-approve it in your organization's Claude settings.
 |---|---|
 | Asked to sign in repeatedly | Sign in once more; if it keeps recurring, contact support with the details below |
 | "You do not have access" | Your Paycor administrator needs to grant the required permission |
-| Sign-in page never opens | Another program may be using the port Claude needs for sign-in; restart Claude and try again |
-| "Cannot connect" | Check that your network allows the host in the `url` field of this package's `.mcp.json`; your IT team may need to allow it |
+| Sign-in page never opens | Restart Claude and try again. In Claude Code, another program may be using the local port needed for sign-in |
+| "Cannot connect" | Check that your network allows `apis.paycor.com`; your IT team may need to allow it |
 
 When contacting support, include: this plugin's version (below), the error text you saw, roughly when
 it happened, and whether sign-in had succeeded.
@@ -104,4 +114,4 @@ it happened, and whether sign-in had succeeded.
 
 ## Version
 
-0.3.0 — see [CHANGELOG.md](CHANGELOG.md).
+0.4.0 — see [CHANGELOG.md](CHANGELOG.md).

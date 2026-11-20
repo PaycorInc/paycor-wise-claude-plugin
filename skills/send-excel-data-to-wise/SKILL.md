@@ -44,7 +44,7 @@ Follow these steps in order.
 1. Is this an upload?
    Only when the user wants the data stored in or processed by Paycor (import, add, update, attach).
    Questions about the data: answer from the workbook. A question to WISE about a few values: put the
-   values in the ask_wise message.
+   values in the ask_wise request.
 
 2. Read the workbook.
    Every sheet except "Data Sources" and except empty sheets, in workbook order. For each sheet read
@@ -95,12 +95,12 @@ Follow these steps in order.
 8. If the user has not said what WISE should do with the data, tell them it is stored (list the
    sheets) and ask; end the turn. Otherwise continue.
 
-9. Call ask_wise with the user's instruction and the messageMarker verbatim in that message. If the
+9. Call ask_wise with the user's instruction and the messageMarker verbatim in its request. If the
    file has several sheets, name the sheet(s) WISE should use (for example "import the Timesheet
    sheet as time punches"). Pass companyId only if you already know it in this conversation.
 
 10. If ask_wise returns needs_company_selection, ask with AskUserQuestion exactly as the ask-wise
-    skill's Company selection rule, then call ask_wise again with the same messages (including the
+    skill's Company selection rule, then call ask_wise again with the same request (including the
     marker) and companyId. Do not re-upload. If it returns decision_required, follow the ask-wise
     skill's "Without the card" rules.
 
