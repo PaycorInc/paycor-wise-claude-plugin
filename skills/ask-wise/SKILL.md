@@ -6,8 +6,8 @@ description: "This skill should be used whenever the user asks an HR, payroll, b
 # Asking Paycor WISE
 
 Route HR, payroll, benefits, time, and employee-data questions to the WISE agent via the `ask_wise`
-tool. Follow the history and company rules below exactly — getting them wrong silently produces
-answers about the wrong company or drops all conversational context.
+tool. Follow the request and company rules below exactly — getting them wrong silently produces
+answers about the wrong company or loses what a follow-up question refers to.
 
 If the user wants to **store a document in Paycor** (attach a certificate to an employee, file a
 signed form), that is the `upload-to-wise` skill, not this one — it is a multi-step flow that ends in
@@ -24,7 +24,7 @@ Companies and clients are **different** levels in Paycor, and their ids are **di
   inside a company and is only known to WISE — it never appears in `structuredContent.companies`.
 
 Never present company ids as client ids, or vice versa. When reporting, always label which is which
-(e.g. "Company: Sales Demo (984202) → Client ID 323318").
+(e.g. "Company: Acme Corp (100001) → Client ID 200001").
 
 For questions about clients (e.g. "list the client ids I have access to", "which clients can I see"):
 
@@ -39,22 +39,31 @@ For questions about clients (e.g. "list the client ids I have access to", "which
 For questions about companies (e.g. "which companies can I see"), the `structuredContent.companies`
 list is the answer — present it as companies, never as clients.
 
-## Chat history
+## Writing the request
 
-`ask_wise` is stateless: WISE retains nothing between calls, so `messages` is the only way it sees
-prior turns.
+`ask_wise` takes only the user's current request, never the chat history. WISE keeps nothing between
+calls, so every `request` must be understandable on its own.
 
-1. Every call passes `messages`: an ordered array of `{ role, content }` entries, oldest first,
-   ending with the current question (`role: "user"`). There is no `conversationId` — nothing is
-   reused across calls.
-2. Include only the prior turns needed to resolve a back-reference in the current question (e.g.
-   "what about last month?" or "and for my other employees"). Omit turns unrelated to the current
-   question rather than replaying the entire session.
-3. Roles must alternate meaningfully: use `"user"` for the end user's own turns and `"assistant"`
-   for WISE's own prior replies (its `content` text, not files/views). Never fabricate a turn that
-   didn't happen.
-4. If no prior turns are relevant, `messages` may be a single `user` entry with just the current
-   question.
+1. Every call passes `request`: the user's current request as a single string. Do not send earlier
+   messages, WISE's earlier replies, or a summary of the conversation — not in `request` and not in
+   any other way.
+2. When the current request refers back to something (e.g. "they", "that employee", "last month",
+   "the second one"), replace the reference with the specific name, ID, date range or filter already
+   established in this conversation.
+3. When the user refers to a set of earlier results, restate the criteria that produced it instead of
+   copying the rows.
+4. Include an uploaded file's `messageMarker` verbatim when the request concerns that file.
+5. If you cannot tell what a reference points to, ask the user rather than guess.
+6. If the request does not refer back to anything, send it as the user wrote it.
+
+For example:
+
+| User says | `request` you send |
+|---|---|
+| "Show employees in Sales hired in 2025" | "Show employees in the Sales department hired in 2025." |
+| "What about their PTO balances?" | "Show the PTO balances of employees in the Sales department hired in 2025." |
+| "Change the second one's phone number to 555-0100" | "Update the phone number of Jane Doe (employee ID 10234, Sales) to 555-0100." |
+| "And for the Marketing team?" | "Show the PTO balances of employees in the Marketing department hired in 2025." |
 
 ## Company selection
 
@@ -70,12 +79,12 @@ prior turns.
      `structuredContent.companies`:
      - `question`: "Which company would you like to use?"
      - `header`: something short like "Company"
-     - `options`: one per company, `description` set to its id (e.g. "Id: 929462").
+     - `options`: one per company, `description` set to its id (e.g. "Id: 100001").
        **`label` must be unique across all options** — `AskUserQuestion` rejects the call outright
        if two options share a label, and that rejection is what can look like a generic "failed to
        show" error to the user instead of the picker. Companies frequently share a display name
-       (e.g. two entries both named "Sales Demo"), so always disambiguate by appending the id to the
-       label, e.g. `"Sales Demo (929462)"`, rather than using the raw company name as-is. Do this
+       (e.g. two entries both named "Acme Corp"), so always disambiguate by appending the id to the
+       label, e.g. `"Acme Corp (100001)"`, rather than using the raw company name as-is. Do this
        unconditionally, even when the names look unique at a glance, so a fresh set of companies
        never trips the same validation error.
      Do this exactly the same way every single time this status appears, with no exceptions, no
@@ -102,8 +111,8 @@ prior turns.
    `structuredContent.status == "invalid_company_selection"` — this is not an error. Present it the
    same way as `needs_company_selection` above (via `AskUserQuestion` when available, with the same
    unique-label rule).
-4. Once the user picks a company, call `ask_wise` again with the chosen `companyId` and the full
-   `messages` history.
+4. Once the user picks a company, call `ask_wise` again with the chosen `companyId` and the same
+   `request`.
 5. `structuredContent.status == "no_active_seat"` means the user has no active WISE seat in any of
    their companies. Tell them a WISE seat must be assigned to them and stop; do not retry.
 6. Never guess a `companyId`, and never carry one over from a different user or session. Ids outside
@@ -115,8 +124,8 @@ prior turns.
   and do not re-derive or recompute numbers from it.
 - Attached files and views arrive as extra text blocks prefixed `[Attached file: …]`. Surface them as
   attachments from WISE rather than folding them into prose.
-- `structuredContent` carries a generated `conversationId` (for support/log correlation only — do
-  not reuse it on later calls, except as `pendingConversationId` below), `status`, and company data.
+- `structuredContent` carries a generated `requestId` (for support/log correlation only — do
+  not reuse it on later calls, except as `pendingRequestId` below), `status`, and company data.
   Read those from it; do not parse the text blocks for them.
 - Answers concern real employee and payroll data. Repeat what WISE returned; do not speculate beyond
   it, and do not fill gaps with assumptions about pay, benefits, or employment status.
@@ -169,13 +178,30 @@ user can answer it there**.
    the outcome and the reply. Acknowledge it briefly without repeating what the card shows, and do not
    re-run the request. If instead the card posts the outcome in chat as the user's message (for example
    "I approved: Update Date Of Birth"), that message is not a new question: call
-   `get_wise_decision_result` with `conversationId` set to the paused result's
-   `structuredContent.conversationId`, then treat its result exactly like an `ask_wise` result (the
+   `get_wise_decision_result` with `requestId` set to the paused result's
+   `structuredContent.requestId`, then treat its result exactly like an `ask_wise` result (the
    same rules above apply). If it is `decision_required` again, follow these steps for the new card.
-4. If the user replies in chat instead of using the card (for example they change their mind or ask
-   something else), call `ask_wise` with their reply as the current question and
-   `pendingConversationId` set to the paused result's `structuredContent.conversationId`. That
-   declines the pending request — it is never approved this way — and WISE answers the reply.
+4. Never assume the card is still open. The user may answer it without anything reaching you: some
+   hosts show the outcome and WISE's reply only on the card. So on the user's next message after a
+   `decision_required` result, unless that message already reports the decision (step 3), first find
+   out whether the card was answered:
+   - If the host offers a way to read the card's current state (for example a widget-context tool
+     for `ask_wise`), read it.
+   - Otherwise call `get_wise_decision_result` with the paused result's `structuredContent.requestId`.
+     WISE's reply means the card was answered; an error saying WISE is still waiting for the user's
+     decision means it is still open.
+
+   Then:
+   - **Card already answered** → do not pass `pendingRequestId` (nothing is pending any more, and the
+     change is already made or declined). Mention the outcome in one line if it matters to the new
+     message, and handle the new message as an ordinary `ask_wise` request.
+   - **Card still open** → the user is replying in chat instead of using the card (for example they
+     change their mind or ask something else). Call `ask_wise` with their reply as the current
+     request and `pendingRequestId` set to the paused result's `structuredContent.requestId`. That
+     declines the pending request — it is never approved this way — and WISE answers the reply.
+     Tell the user in one line that the pending change was declined.
+5. Never tell the user a change is still waiting for approval, or that it was not made, unless you
+   checked as in step 4 in this turn.
 
 ### Without the card (the note says this app cannot show WISE's decision card)
 
@@ -189,7 +215,7 @@ The user decides in chat instead, and you relay their answer.
    the decision the note maps their answer to. Never pick an option for the user, never submit before
    they answered, and never reuse an earlier answer for a new decision.
 3. If the user instead changes the request, abandons it or asks something else, call `ask_wise` with
-   their reply and `pendingConversationId` set to the conversationId the note gives, instead of
+   their reply and `pendingRequestId` set to the requestId the note gives, instead of
    submitting. That declines the pending request and WISE answers the reply.
 4. Treat the `submit_wise_decision` result exactly like an `ask_wise` result. If it is
    `decision_required` again, start over at step 1 for the new decision.
@@ -203,3 +229,14 @@ The user decides in chat instead, and you relay their answer.
   Re-authenticating will not fix it; their Paycor administrator needs to grant it. Say so plainly.
 - A timeout → a WISE run is bounded server-side. Suggest a narrower or more specific question rather
   than retrying the same one unchanged.
+- "The WISE service returned an error and could not complete this request" → usually a temporary
+  failure between the connector and WISE.
+  - For a request that only reads data (lists, look-ups, balances, questions), retry the same call
+    once, immediately and without comment (same `request`, same `companyId`; keep `pendingRequestId`
+    only if step 4 of the decision flow still applies).
+  - For a request that creates, updates or deletes something, do not resend it blindly: the change
+    may already have been applied before the error. First ask WISE, in a read-only request, whether
+    the change is already in place (e.g. "Show the assets assigned to Brian Anderson (employee #282)"),
+    and resend the change only if it is not.
+  - If the retry fails too, stop and tell the user WISE is having trouble, with the `requestId` from
+    the last error so support can trace it. Never retry more than once.

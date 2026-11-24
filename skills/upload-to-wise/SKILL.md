@@ -79,12 +79,12 @@ extension (a renamed executable, a corrupt PDF) is accepted at upload and comes 
 
 ### 4. Tell WISE what to do with it
 
-Only once `ready`, call `ask_wise` with the `messageMarker` included **verbatim** in your `messages`,
+Only once `ready`, call `ask_wise` with the `messageMarker` included **verbatim** in your `request`,
 alongside the instruction — e.g. "attach this to employee Z".
 
 `ask_wise` is stateless, so **re-include the same `messageMarker` in every later call that refers to
 the same file.** Drop it and WISE no longer knows which document you mean. See the `ask-wise` skill
-for the history and company rules that apply to this call.
+for the request and company rules that apply to this call.
 
 ## Company selection
 
