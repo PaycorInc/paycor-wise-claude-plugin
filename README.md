@@ -114,4 +114,4 @@ it happened, and whether sign-in had succeeded.
 
 ## Version
 
-0.4.0 — see [CHANGELOG.md](CHANGELOG.md).
+0.5.0 — see [CHANGELOG.md](CHANGELOG.md).

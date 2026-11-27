@@ -2,19 +2,6 @@
 
 All notable changes to the Paycor WISE Assistant plugin for Claude.
 
-## Unreleased
-
-- **Typing a new message while an approval card is open now declines it, as WISE does on the web.**
-  The card turns to "Denied" on its own instead of keeping live buttons that could only fail. Claude
-  now sends your next message to WISE right away instead of first checking the card, which showed a
-  second copy of an open card and slowed the reply.
-- **Follow-ups stay on the same employee.** The same name (even the same employee number) can exist
-  under more than one client, and each request reaches WISE on its own, so Claude now names an
-  identified employee the same way every time: name, employee number and client. When two WISE
-  answers seem to conflict, Claude says which record each was about and checks with a read-only
-  request instead of guessing.
-- A table in WISE's reply under a decision card is shown once, not also as raw markdown above it.
-
 ## 0.4.0 — first public release
 
 - **Ask WISE from Claude.** Ask HR, payroll, benefits, time and employee-data questions in plain
