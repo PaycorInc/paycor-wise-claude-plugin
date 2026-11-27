@@ -55,6 +55,12 @@ calls, so every `request` must be understandable on its own.
 4. Include an uploaded file's `messageMarker` verbatim when the request concerns that file.
 5. If you cannot tell what a reference points to, ask the user rather than guess.
 6. If the request does not refer back to anything, send it as the user wrote it.
+7. Once a specific employee (or other record) has been identified in this conversation, every later
+   request about it names it the same precise way: the person's name, employee number **and client**
+   (client name and client ID), as WISE identified them. This matters most after WISE asked which of
+   several records was meant: the same name and even the same employee number can exist under more
+   than one client in a company, and because WISE keeps nothing between calls, a request that drops
+   the client can reach a different person's record. Never shorten it back to the bare name.
 
 For example:
 
@@ -64,6 +70,7 @@ For example:
 | "What about their PTO balances?" | "Show the PTO balances of employees in the Sales department hired in 2025." |
 | "Change the second one's phone number to 555-0100" | "Update the phone number of Jane Doe (employee ID 10234, Sales) to 555-0100." |
 | "And for the Marketing team?" | "Show the PTO balances of employees in the Marketing department hired in 2025." |
+| "Set her headphones to damaged" (after picking Ann Barre under SalesDemo) | "Update the condition of the Headphones asset of Ann Barre (employee #105, client SalesDemo - JPost - GA Base Client, client ID 335904) to Damaged." |
 
 ## Company selection
 
@@ -129,6 +136,11 @@ For example:
   Read those from it; do not parse the text blocks for them.
 - Answers concern real employee and payroll data. Repeat what WISE returned; do not speculate beyond
   it, and do not fill gaps with assumptions about pay, benefits, or employment status.
+- If a WISE answer seems to contradict an earlier one (a value differs, or a change WISE reported as
+  made now looks missing), do not explain it with a guess such as "the change was never applied".
+  Two requests may have reached different records. Say what WISE answered and which record it was
+  about, and if the difference matters, check with a read-only `ask_wise` request that names the exact
+  record (name, employee number and client), as in rule 7 of "Writing the request".
 
 ## Citations (`sourceLink`)
 
@@ -181,27 +193,17 @@ user can answer it there**.
    `get_wise_decision_result` with `requestId` set to the paused result's
    `structuredContent.requestId`, then treat its result exactly like an `ask_wise` result (the
    same rules above apply). If it is `decision_required` again, follow these steps for the new card.
-4. Never assume the card is still open. The user may answer it without anything reaching you: some
-   hosts show the outcome and WISE's reply only on the card. So on the user's next message after a
-   `decision_required` result, unless that message already reports the decision (step 3), first find
-   out whether the card was answered:
-   - If the host offers a way to read the card's current state (for example a widget-context tool
-     for `ask_wise`), read it.
-   - Otherwise call `get_wise_decision_result` with the paused result's `structuredContent.requestId`.
-     WISE's reply means the card was answered; an error saying WISE is still waiting for the user's
-     decision means it is still open.
-
-   Then:
-   - **Card already answered** → do not pass `pendingRequestId` (nothing is pending any more, and the
-     change is already made or declined). Mention the outcome in one line if it matters to the new
-     message, and handle the new message as an ordinary `ask_wise` request.
-   - **Card still open** → the user is replying in chat instead of using the card (for example they
-     change their mind or ask something else). Call `ask_wise` with their reply as the current
-     request and `pendingRequestId` set to the paused result's `structuredContent.requestId`. That
-     declines the pending request — it is never approved this way — and WISE answers the reply.
-     Tell the user in one line that the pending change was declined.
-5. Never tell the user a change is still waiting for approval, or that it was not made, unless you
-   checked as in step 4 in this turn.
+4. Any other next message from the user after a `decision_required` result (one that does not report
+   the decision as in step 3) goes straight to `ask_wise`: their message as the current request and
+   `pendingRequestId` set to the paused result's `structuredContent.requestId`. Do this right away.
+   Do not call `get_wise_decision_result` or read the card first, and do not deliberate over whether
+   the card is still open. The server works it out:
+   - **Card still open** → the pending request is declined (never approved this way), the card turns
+     to "Denied", and WISE answers the message. This matches WISE on the web, where typing a message
+     while a card is open declines it.
+   - **Card already answered** → nothing is declined; the message is handled as a new request.
+5. Never tell the user a change is still waiting for approval, or that it was not made, unless a
+   result in this turn says so.
 
 ### Without the card (the note says this app cannot show WISE's decision card)
 
